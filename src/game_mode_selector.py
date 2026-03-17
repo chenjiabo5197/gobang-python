@@ -19,7 +19,7 @@ class GameModeSelector:
         
         # 设置窗口大小
         window_width = 400
-        window_height = 300
+        window_height = 350
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
         x = (screen_width - window_width) // 2
