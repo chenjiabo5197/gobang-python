@@ -64,6 +64,17 @@ class GameModeSelector:
             command=self.start_network_multiplayer
         )
         network_multiplayer_btn.pack(pady=10)
+        
+        # 创建退出游戏按钮
+        exit_btn = tk.Button(
+            button_frame, 
+            text="退出游戏", 
+            width=25, 
+            height=2, 
+            font=("Arial", 12),
+            command=self.exit_game
+        )
+        exit_btn.pack(pady=10)
     
     def start_single_player(self):
         """开始单人游戏，创建GobangSingle实例
@@ -100,6 +111,14 @@ class GameModeSelector:
         root = tk.Tk()
         network_window = NetworkSetupWindow(root)
         root.mainloop()
+    
+    def exit_game(self):
+        """退出游戏，关闭主窗口
+        
+        Returns:
+            None
+        """
+        self.root.destroy()
 
 class NetworkSetupWindow:
     """网络对战设置窗口，用于选择创建主机或加入客户端"""
