@@ -2,15 +2,17 @@ import tkinter as tk
 
 class GobangBase:
     """五子棋游戏基类，包含所有游戏模式共享的核心功能"""
-    def __init__(self, root):
+    def __init__(self, root, layout="vertical"):
         """初始化游戏
         
         Args:
             root: Tkinter根窗口对象
+            layout: 布局类型，"vertical"、"horizontal"或"grid"
         """
         self.root = root
         self.root.title("五子棋")
         self.root.resizable(False, False)
+        self.layout = layout
         
         # 棋盘参数
         self.board_size = 15  # 15x15棋盘
@@ -29,9 +31,21 @@ class GobangBase:
         self.game_over = False
         self.last_move = None  # 上一步落子位置 (x, y)
         
+        # 根据布局类型创建UI
+        if layout == "vertical":
+            self.create_vertical_layout()
+        elif layout == "horizontal":
+            self.create_horizontal_layout()
+        elif layout == "grid":
+            self.create_grid_layout()
+        else:
+            self.create_vertical_layout()  # 默认垂直布局
+    
+    def create_vertical_layout(self):
+        """创建垂直布局"""
         # 创建画布
         self.canvas = tk.Canvas(
-            root, 
+            self.root, 
             width=self.board_size * self.cell_size + 2 * self.margin, 
             height=self.board_size * self.cell_size + 2 * self.margin,
             bg=self.bg_color
@@ -45,7 +59,7 @@ class GobangBase:
         self.canvas.bind("<Button-1>", self.on_click)
         
         # 添加按钮区域
-        self.button_frame = tk.Frame(root)
+        self.button_frame = tk.Frame(self.root)
         self.button_frame.pack(pady=10)
         
         # 添加重置按钮
@@ -59,8 +73,90 @@ class GobangBase:
         # 显示当前玩家
         self.status_var = tk.StringVar()
         self.status_var.set("当前玩家: 黑棋")
-        self.status_label = tk.Label(root, textvariable=self.status_var, font=("Arial", 12))
+        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=("Arial", 12))
         self.status_label.pack()
+    
+    def create_horizontal_layout(self):
+        """创建水平布局"""
+        # 创建主框架
+        main_frame = tk.Frame(self.root)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # 左侧画布
+        self.canvas = tk.Canvas(
+            main_frame, 
+            width=self.board_size * self.cell_size + 2 * self.margin, 
+            height=self.board_size * self.cell_size + 2 * self.margin,
+            bg=self.bg_color
+        )
+        self.canvas.pack(side=tk.LEFT, padx=10, pady=10)
+        
+        # 绘制棋盘
+        self.draw_board()
+        
+        # 绑定鼠标事件
+        self.canvas.bind("<Button-1>", self.on_click)
+        
+        # 右侧控制面板
+        control_frame = tk.Frame(main_frame)
+        control_frame.pack(side=tk.RIGHT, padx=10, pady=10, fill=tk.Y)
+        
+        # 显示当前玩家
+        self.status_var = tk.StringVar()
+        self.status_var.set("当前玩家: 黑棋")
+        self.status_label = tk.Label(control_frame, textvariable=self.status_var, font=("Arial", 12))
+        self.status_label.pack(pady=20)
+        
+        # 添加按钮区域
+        self.button_frame = tk.Frame(control_frame)
+        self.button_frame.pack(pady=10)
+        
+        # 添加重置按钮
+        self.reset_button = tk.Button(self.button_frame, text="重置游戏", command=self.reset_game, width=15)
+        self.reset_button.pack(pady=10)
+        
+        # 添加返回主菜单按钮
+        self.back_button = tk.Button(self.button_frame, text="返回主菜单", command=self.back_to_menu, width=15)
+        self.back_button.pack(pady=10)
+    
+    def create_grid_layout(self):
+        """创建网格布局"""
+        # 创建主框架
+        main_frame = tk.Frame(self.root)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 顶部状态显示
+        self.status_var = tk.StringVar()
+        self.status_var.set("当前玩家: 黑棋")
+        self.status_label = tk.Label(main_frame, textvariable=self.status_var, font=("Arial", 12))
+        self.status_label.grid(row=0, column=0, columnspan=2, pady=10)
+        
+        # 中间棋盘
+        self.canvas = tk.Canvas(
+            main_frame, 
+            width=self.board_size * self.cell_size + 2 * self.margin, 
+            height=self.board_size * self.cell_size + 2 * self.margin,
+            bg=self.bg_color
+        )
+        self.canvas.grid(row=1, column=0, padx=10, pady=10)
+        
+        # 绘制棋盘
+        self.draw_board()
+        
+        # 绑定鼠标事件
+        self.canvas.bind("<Button-1>", self.on_click)
+        
+        # 右侧按钮区域
+        self.button_frame = tk.Frame(main_frame)
+        self.button_frame.grid(row=1, column=1, padx=10, pady=10, sticky=tk.N)
+        
+        # 添加重置按钮
+        self.reset_button = tk.Button(self.button_frame, text="重置游戏", command=self.reset_game, width=15)
+        self.reset_button.pack(pady=10)
+        
+        # 添加返回主菜单按钮
+        self.back_button = tk.Button(self.button_frame, text="返回主菜单", command=self.back_to_menu, width=15)
+        self.back_button.pack(pady=10)
     
     def draw_board(self):
         """绘制棋盘，包括横线、竖线和星位点"""

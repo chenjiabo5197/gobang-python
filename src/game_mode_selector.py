@@ -30,13 +30,31 @@ class GameModeSelector:
         title_label = tk.Label(root, text="五子棋", font=("Arial", 24, "bold"))
         title_label.pack(pady=20)
         
+        # 创建布局选择区域
+        layout_frame = tk.Frame(root)
+        layout_frame.pack(pady=10)
+        
+        layout_label = tk.Label(layout_frame, text="选择布局:", font=("Arial", 12))
+        layout_label.pack(side=tk.LEFT, padx=10)
+        
+        self.layout_var = tk.StringVar(value="vertical")
+        
+        vertical_btn = tk.Radiobutton(layout_frame, text="垂直布局", variable=self.layout_var, value="vertical")
+        vertical_btn.pack(side=tk.LEFT, padx=5)
+        
+        horizontal_btn = tk.Radiobutton(layout_frame, text="水平布局", variable=self.layout_var, value="horizontal")
+        horizontal_btn.pack(side=tk.LEFT, padx=5)
+        
+        grid_btn = tk.Radiobutton(layout_frame, text="网格布局", variable=self.layout_var, value="grid")
+        grid_btn.pack(side=tk.LEFT, padx=5)
+        
         # 创建按钮容器
-        button_frame = tk.Frame(root)
-        button_frame.pack(pady=10)
+        self.button_frame = tk.Frame(root)
+        self.button_frame.pack(pady=10)
         
         # 创建游戏模式按钮
         single_player_btn = tk.Button(
-            button_frame, 
+            self.button_frame, 
             text="单人游戏（对战电脑）", 
             width=25, 
             height=2, 
@@ -46,7 +64,7 @@ class GameModeSelector:
         single_player_btn.pack(pady=10)
         
         local_multiplayer_btn = tk.Button(
-            button_frame, 
+            self.button_frame, 
             text="双人游戏（本地）", 
             width=25, 
             height=2, 
@@ -56,7 +74,7 @@ class GameModeSelector:
         local_multiplayer_btn.pack(pady=10)
         
         network_multiplayer_btn = tk.Button(
-            button_frame, 
+            self.button_frame, 
             text="双人游戏（网络对战）", 
             width=25, 
             height=2, 
@@ -67,7 +85,7 @@ class GameModeSelector:
         
         # 创建退出游戏按钮
         exit_btn = tk.Button(
-            button_frame, 
+            self.button_frame, 
             text="退出游戏", 
             width=25, 
             height=2, 
@@ -85,7 +103,7 @@ class GameModeSelector:
 
         self.root.destroy()
         root = tk.Tk()
-        game = GobangSingle(root)
+        game = GobangSingle(root, layout=self.layout_var.get())
         root.mainloop()
     
     def start_local_multiplayer(self):
@@ -97,7 +115,7 @@ class GameModeSelector:
 
         self.root.destroy()
         root = tk.Tk()
-        game = GobangMultiplayer(root)
+        game = GobangMultiplayer(root, layout=self.layout_var.get())
         root.mainloop()
     
     def start_network_multiplayer(self):
@@ -109,7 +127,7 @@ class GameModeSelector:
 
         self.root.destroy()
         root = tk.Tk()
-        network_window = NetworkSetupWindow(root)
+        network_window = NetworkSetupWindow(root, layout=self.layout_var.get())
         root.mainloop()
     
     def exit_game(self):
@@ -123,15 +141,17 @@ class GameModeSelector:
 class NetworkSetupWindow:
     """网络对战设置窗口，用于选择创建主机或加入客户端"""
 
-    def __init__(self, root):
+    def __init__(self, root, layout="vertical"):
         """初始化网络对战设置窗口
         
         Args:
             root: Tkinter根窗口对象
+            layout: 布局类型，"vertical"、"horizontal"或"grid"
         """
         self.root = root
         self.root.title("五子棋 - 网络对战设置")
         self.root.resizable(False, False)
+        self.layout = layout
         
         # 设置窗口大小
         window_width = 400
@@ -184,7 +204,7 @@ class NetworkSetupWindow:
 
         self.root.destroy()
         root = tk.Tk()
-        game = GobangNetwork(root, game_mode="network_host")
+        game = GobangNetwork(root, game_mode="network_host", layout=self.layout)
         root.mainloop()
     
     def join_client(self):
@@ -196,7 +216,7 @@ class NetworkSetupWindow:
 
         self.root.destroy()
         root = tk.Tk()
-        game = GobangNetwork(root, game_mode="network_client")
+        game = GobangNetwork(root, game_mode="network_client", layout=self.layout)
         root.mainloop()
     
     def go_back(self):

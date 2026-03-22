@@ -2,13 +2,14 @@ from gobang_base import GobangBase
 
 class GobangSingle(GobangBase):
     """单人游戏模式，对战电脑AI"""
-    def __init__(self, root):
+    def __init__(self, root, layout="vertical"):
         """初始化单人游戏
         
         Args:
             root: Tkinter根窗口对象
+            layout: 布局类型，"vertical"、"horizontal"或"grid"
         """
-        super().__init__(root)
+        super().__init__(root, layout=layout)
         self.status_var.set("当前玩家: 黑棋（您）")
     
     def on_click(self, event):

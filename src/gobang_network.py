@@ -5,15 +5,16 @@ from gobang_base import GobangBase
 class GobangNetwork(GobangBase):
     """网络对战模式，支持主机和客户端两种角色"""
 
-    def __init__(self, root, game_mode):
+    def __init__(self, root, game_mode, layout="vertical"):
         """初始化网络对战游戏
         
         Args:
             root: Tkinter根窗口对象
             game_mode: 游戏模式，"network_host"表示主机，"network_client"表示客户端
+            layout: 布局类型，"vertical"、"horizontal"或"grid"
         """
 
-        super().__init__(root)
+        super().__init__(root, layout=layout)
         self.game_mode = game_mode
         self.socket = None
         self.connected = False
