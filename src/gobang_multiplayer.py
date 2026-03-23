@@ -31,7 +31,15 @@ class GobangMultiplayer(GobangBase):
         if 0 <= x < self.board_size and 0 <= y < self.board_size and self.board[y][x] == 0:
             # 落子
             self.board[y][x] = self.current_player
-            self.draw_stone(x, y, self.current_player)
+            # 记录上一步落子位置
+            self.last_move = (x, y)
+            # 记录黑方或白方的最后落子位置
+            if self.current_player == 1:
+                self.last_black_move = (x, y)
+            else:
+                self.last_white_move = (x, y)
+            # 重新绘制棋盘和所有棋子，以清除之前的标记并绘制新标记
+            self.redraw_board()
             
             # 检查胜负
             if self.check_win(x, y, self.current_player):

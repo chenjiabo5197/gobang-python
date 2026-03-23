@@ -29,7 +29,9 @@ class GobangBase:
         self.board = [[0 for _ in range(self.board_size)] for _ in range(self.board_size)]  # 0:空, 1:黑, 2:白
         self.current_player = 1  # 1:黑棋, 2:白棋
         self.game_over = False
-        self.last_move = None  # 上一步落子位置 (x, y)
+        self.last_move = None  # 上一步落子位置 (x, y) - 保留用于兼容性
+        self.last_black_move = None  # 黑方最后落子位置
+        self.last_white_move = None  # 白方最后落子位置
         
         # 根据布局类型创建UI
         if layout == "vertical":
@@ -209,6 +211,11 @@ class GobangBase:
             self.board[y][x] = self.current_player
             # 记录上一步落子位置
             self.last_move = (x, y)
+            # 记录黑方或白方的最后落子位置
+            if self.current_player == 1:
+                self.last_black_move = (x, y)
+            else:
+                self.last_white_move = (x, y)
             # 重新绘制棋盘和所有棋子，以清除之前的标记并绘制新标记
             self.redraw_board()
             
@@ -246,15 +253,23 @@ class GobangBase:
             fill=color, outline=self.line_color
         )
         
-        # 标记上一步落子位置
-        if self.last_move == (x, y):
-            # 为黑棋标记红色小点，为白棋标记红色小点，使用红色确保在两种颜色棋子上都清晰可见
-            mark_color = "#FF0000"  # 红色标记
-            mark_outline = "#FFFFFF" if player == 1 else "#000000"  # 黑棋用白色边框，白棋用黑色边框
+        # 标记黑方最后落子位置
+        if player == 1 and self.last_black_move == (x, y):
+            # 为黑棋标记白色小点，不使用边框
+            mark_color = "#FFFFFF"  # 白色标记
             self.canvas.create_oval(
-                center_x - 10, center_y - 10, 
-                center_x + 10, center_y + 10,
-                fill=mark_color, outline=mark_outline, width=3
+                center_x - 8, center_y - 8, 
+                center_x + 8, center_y + 8,
+                fill=mark_color
+            )
+        # 标记白方最后落子位置
+        elif player == 2 and self.last_white_move == (x, y):
+            # 为白棋标记黑色小点，不使用边框
+            mark_color = "#000000"  # 黑色标记
+            self.canvas.create_oval(
+                center_x - 8, center_y - 8, 
+                center_x + 8, center_y + 8,
+                fill=mark_color
             )
     
     def check_win(self, x, y, player):
@@ -313,6 +328,8 @@ class GobangBase:
         self.current_player = 1
         self.game_over = False
         self.last_move = None  # 清空上一步落子位置
+        self.last_black_move = None  # 清空黑方最后落子位置
+        self.last_white_move = None  # 清空白方最后落子位置
         
         # 清空画布并重新绘制棋盘
         self.canvas.delete("all")
