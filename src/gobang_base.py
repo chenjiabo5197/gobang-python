@@ -1,18 +1,17 @@
 import tkinter as tk
-import os
-import subprocess
-import sys
 
 class GobangBase:
     """五子棋游戏基类，包含所有游戏模式共享的核心功能"""
-    def __init__(self, root, layout="vertical"):
+    def __init__(self, root, layout="vertical", back_callback=None):
         """初始化游戏
-        
+
         Args:
             root: Tkinter根窗口对象
             layout: 布局类型，"vertical"、"horizontal"或"grid"
+            back_callback: 返回主菜单的回调函数
         """
         self.root = root
+        self.back_callback = back_callback
         self.root.title("五子棋")
         self.root.resizable(False, False)
         
@@ -236,6 +235,10 @@ class GobangBase:
             self.status_var.set(f"游戏结束! {winner}获胜!")
             self.game_over = True
             return
+        elif result == "draw":
+            self.status_var.set("游戏结束! 平局!")
+            self.game_over = True
+            return
         elif result == "invalid":
             return
         
@@ -269,6 +272,8 @@ class GobangBase:
         
         if self.check_win(x, y, player):
             return "win"
+        if all(self.board[row][col] != 0 for row in range(self.board_size) for col in range(self.board_size)):
+            return "draw"
         return "placed"
     
     def draw_stone(self, x, y, player):
@@ -418,7 +423,7 @@ class GobangBase:
         return True
     
     def back_to_menu(self):
-        """返回主菜单，销毁当前窗口并重新启动应用"""
+        """返回主菜单，销毁当前窗口并通过回调重新创建主菜单"""
         self.root.destroy()
-        main_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "main.py")
-        subprocess.Popen([sys.executable, main_path])
+        if self.back_callback:
+            self.back_callback()

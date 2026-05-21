@@ -13,3 +13,11 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Debug / Test
+debug.log
+debug_*.py
+test_*.py
+
+# Claude
+.claude/

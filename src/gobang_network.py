@@ -7,22 +7,24 @@ from gobang_base import GobangBase
 class GobangNetwork(GobangBase):
     """网络对战模式，支持主机和客户端两种角色"""
 
-    def __init__(self, root, game_mode, layout="vertical", host="127.0.0.1", port=12345):
+    def __init__(self, root, game_mode, layout="vertical", host="127.0.0.1", port=12345, back_callback=None):
         """初始化网络对战游戏
-        
+
         Args:
             root: Tkinter根窗口对象
             game_mode: 游戏模式，"network_host"表示主机，"network_client"表示客户端
             layout: 布局类型，"vertical"、"horizontal"或"grid"
             host: 客户端模式下要连接的主机IP地址
             port: 客户端模式下要连接的端口号
+            back_callback: 返回主菜单的回调函数
         """
 
-        super().__init__(root, layout=layout)
+        super().__init__(root, layout=layout, back_callback=back_callback)
         self.game_mode = game_mode
         self.socket = None
         self.connected = False
-        
+        self.port = port
+
         if game_mode == "network_host":
             self.start_host()
         elif game_mode == "network_client":
@@ -53,9 +55,13 @@ class GobangNetwork(GobangBase):
         
         result = self._place_stone(x, y, self.current_player)
         if result == "win":
-            winner = "您" if ((self.game_mode == "network_host" and self.current_player == 1) or 
+            winner = "您" if ((self.game_mode == "network_host" and self.current_player == 1) or
                             (self.game_mode == "network_client" and self.current_player == 2)) else "对方"
             self.status_var.set(f"游戏结束! {winner}获胜!")
+            self.game_over = True
+            return
+        elif result == "draw":
+            self.status_var.set("游戏结束! 平局!")
             self.game_over = True
             return
         elif result == "invalid":
@@ -86,21 +92,29 @@ class GobangNetwork(GobangBase):
         """
 
         self.status_var.set("正在创建游戏...")
-        
+
         # 创建服务器
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind(("0.0.0.0", 12345))
+        try:
+            server.bind(("0.0.0.0", self.port))
+        except OSError:
+            self.status_var.set(f"端口 {self.port} 被占用，请使用其他端口")
+            return
         server.listen(1)
-        
+
         # 显示主机信息
         hostname = socket.gethostname()
-        ip = socket.gethostbyname(hostname)
-        self.status_var.set(f"主机已创建\nIP: {ip}\n端口: 12345\n等待连接...\n您是: 黑方")
+        try:
+            ip = socket.gethostbyname(hostname)
+        except:
+            ip = "无法获取IP"
+        self.status_var.set(f"主机已创建\nIP: {ip}\n端口: {self.port}\n等待连接...\n您是: 黑方")
         
         # 接受连接的线程
         def accept_connection():
             try:
                 self.socket, addr = server.accept()
+                server.close()
                 self.connected = True
                 self.status_var.set(f"已连接: {addr}\n当前玩家: 黑棋（您）")
                 # 开始接收消息
@@ -127,7 +141,7 @@ class GobangNetwork(GobangBase):
             self.connected = True
             self.status_var.set("已连接到主机\n当前玩家: 黑棋（对方）")
             threading.Thread(target=self.receive_messages, daemon=True).start()
-            self.current_player = 1
+            self.current_player = 2  # 客户端为白方
         except:
             self.status_var.set(f"连接失败，请检查主机 {host}:{port} 是否开启\n您是: 白方")
     
@@ -173,8 +187,11 @@ class GobangNetwork(GobangBase):
             winner = "对方" if opponent_player != self.current_player else "您"
             self.status_var.set(f"游戏结束! {winner}获胜!")
             self.game_over = True
+        elif result == "draw":
+            self.status_var.set("游戏结束! 平局!")
+            self.game_over = True
         elif result == "placed":
-            self.current_player = opponent_player
+            self.current_player = 2 if opponent_player == 1 else 1  # 切换到本地玩家回合
             current_player_text = "黑棋" if self.current_player == 1 else "白棋"
             if (self.game_mode == "network_host" and self.current_player == 1) or \
                (self.game_mode == "network_client" and self.current_player == 2):
@@ -258,4 +275,4 @@ class GobangNetwork(GobangBase):
             self.status_var.set("当前玩家: 黑棋（您）")
         elif self.game_mode == "network_client":
             self.status_var.set("当前玩家: 黑棋（对方）")
-            self.current_player = 1
+            self.current_player = 2  # 客户端为白方

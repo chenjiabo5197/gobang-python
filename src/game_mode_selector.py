@@ -99,28 +99,34 @@ class GameModeSelector:
         layout = self.layout_var.get()
         self.root.destroy()
         root = tk.Tk()
-        difficulty_window = DifficultySelectionWindow(root, layout=layout)
+        difficulty_window = DifficultySelectionWindow(root, layout=layout, back_callback=self._recreate_selector)
         root.mainloop()
-    
+
     def start_local_multiplayer(self):
         """开始本地双人游戏，创建GobangMultiplayer实例"""
         layout = self.layout_var.get()
         self.root.destroy()
         root = tk.Tk()
-        game = GobangMultiplayer(root, layout=layout)
+        game = GobangMultiplayer(root, layout=layout, back_callback=self._recreate_selector)
         root.mainloop()
-    
+
     def start_network_multiplayer(self):
         """开始网络对战，创建NetworkSetupWindow实例"""
         layout = self.layout_var.get()
         self.root.destroy()
         root = tk.Tk()
-        network_window = NetworkSetupWindow(root, layout=layout)
+        network_window = NetworkSetupWindow(root, layout=layout, back_callback=self._recreate_selector)
         root.mainloop()
     
+    def _recreate_selector(self):
+        """在同一进程中重新创建主菜单选择器"""
+        root = tk.Tk()
+        GameModeSelector(root)
+        root.mainloop()
+
     def exit_game(self):
         """退出游戏，关闭主窗口
-        
+
         Returns:
             None
         """
@@ -129,17 +135,19 @@ class GameModeSelector:
 class NetworkSetupWindow:
     """网络对战设置窗口，用于选择创建主机或加入客户端"""
 
-    def __init__(self, root, layout="vertical"):
+    def __init__(self, root, layout="vertical", back_callback=None):
         """初始化网络对战设置窗口
-        
+
         Args:
             root: Tkinter根窗口对象
             layout: 布局类型，"vertical"、"horizontal"或"grid"
+            back_callback: 返回主菜单的回调函数
         """
         self.root = root
         self.root.title("五子棋 - 网络对战设置")
         self.root.resizable(False, False)
         self.layout = layout
+        self.back_callback = back_callback
         
         # 设置窗口大小
         window_width = 400
@@ -185,14 +193,21 @@ class NetworkSetupWindow:
     
     def create_host(self):
         """创建主机，创建GobangNetwork实例并设置为network_host模式
-        
+
         Returns:
             None
         """
+        from tkinter import simpledialog
+
+        port_str = simpledialog.askstring("主机设置", "请输入端口号:", initialvalue="12345")
+        try:
+            port = int(port_str)
+        except (ValueError, TypeError):
+            port = 12345
 
         self.root.destroy()
         root = tk.Tk()
-        game = GobangNetwork(root, game_mode="network_host", layout=self.layout)
+        game = GobangNetwork(root, game_mode="network_host", layout=self.layout, port=port, back_callback=self.back_callback)
         root.mainloop()
     
     def join_client(self):
@@ -211,35 +226,36 @@ class NetworkSetupWindow:
         
         self.root.destroy()
         root = tk.Tk()
-        game = GobangNetwork(root, game_mode="network_client", layout=self.layout, host=ip, port=port)
+        game = GobangNetwork(root, game_mode="network_client", layout=self.layout, host=ip, port=port, back_callback=self.back_callback)
         root.mainloop()
     
     def go_back(self):
-        """返回游戏模式选择，创建GameModeSelector实例
-        
+        """返回游戏模式选择，通过回调重新创建主菜单
+
         Returns:
             None
         """
 
         self.root.destroy()
-        root = tk.Tk()
-        selector = GameModeSelector(root)
-        root.mainloop()
+        if self.back_callback:
+            self.back_callback()
 
 class DifficultySelectionWindow:
     """难度选择窗口，用于选择单人游戏的难度"""
 
-    def __init__(self, root, layout="vertical"):
+    def __init__(self, root, layout="vertical", back_callback=None):
         """初始化难度选择窗口
-        
+
         Args:
             root: Tkinter根窗口对象
             layout: 布局类型，"vertical"、"horizontal"或"grid"
+            back_callback: 返回主菜单的回调函数
         """
         self.root = root
         self.root.title("五子棋 - 难度选择")
         self.root.resizable(False, False)
         self.layout = layout
+        self.back_callback = back_callback
         
         window_width = 300
         window_height = 320
@@ -301,20 +317,15 @@ class DifficultySelectionWindow:
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
         root.geometry(f"{window_width}x{window_height}+{x}+{y}")
-        game = GobangSingle(root, layout=layout, difficulty=difficulty)
+        game = GobangSingle(root, layout=layout, difficulty=difficulty, back_callback=self.back_callback)
         root.mainloop()
     
     def go_back(self):
-        """返回游戏模式选择，创建GameModeSelector实例
-        
+        """返回游戏模式选择，通过回调重新创建主菜单
+
         Returns:
             None
         """
-        # 销毁难度选择窗口
         self.root.destroy()
-        # 创建新的根窗口
-        root = tk.Tk()
-        # 创建游戏模式选择器
-        selector = GameModeSelector(root)
-        # 启动主循环
-        root.mainloop()
+        if self.back_callback:
+            self.back_callback()

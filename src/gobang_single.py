@@ -3,15 +3,16 @@ from gobang_base import GobangBase
 
 class GobangSingle(GobangBase):
     """单人游戏模式，对战电脑AI"""
-    def __init__(self, root, layout="vertical", difficulty="easy"):
+    def __init__(self, root, layout="vertical", difficulty="easy", back_callback=None):
         """初始化单人游戏
-        
+
         Args:
             root: Tkinter根窗口对象
             layout: 布局类型，"vertical"、"horizontal"或"grid"
             difficulty: 难度等级，"easy"、"medium"或"hard"
+            back_callback: 返回主菜单的回调函数
         """
-        super().__init__(root, layout=layout)
+        super().__init__(root, layout=layout, back_callback=back_callback)
         self.difficulty = difficulty
         self.status_var.set(f"当前玩家: 黑棋（您）\n难度: {self.get_difficulty_text()}")
     
@@ -45,6 +46,10 @@ class GobangSingle(GobangBase):
             self.status_var.set("游戏结束! 您获胜!")
             self.game_over = True
             return
+        elif result == "draw":
+            self.status_var.set("游戏结束! 平局!")
+            self.game_over = True
+            return
         elif result == "invalid":
             return
         
@@ -54,73 +59,81 @@ class GobangSingle(GobangBase):
     
     def evaluate_position(self, x, y, player):
         """评估指定位置对指定玩家的价值
-        
+
         Args:
             x: 棋盘x坐标
             y: 棋盘y坐标
             player: 玩家编号（1或2）
-            
+
         Returns:
             int: 位置价值分数
         """
         if self.board[y][x] != 0:
             return -1  # 已被占用的位置
-        
+
         score = 0
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]  # 四个方向
-        
+
         for dx, dy in directions:
-            # 计算当前方向上的连续棋子数
-            count = 0
-            empty = 0
-            blocked = 0
-            
+            count = 1  # 当前位置的棋子
+            open_ends = 0  # 开放端数
+
             # 向正方向搜索
-            for i in range(1, 5):
+            i = 1
+            while i < 5:
                 nx, ny = x + i * dx, y + i * dy
                 if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
                     if self.board[ny][nx] == player:
                         count += 1
+                        i += 1
                     elif self.board[ny][nx] == 0:
-                        empty += 1
+                        open_ends += 1
                         break
                     else:
-                        blocked += 1
                         break
                 else:
-                    blocked += 1
                     break
-            
+
             # 向反方向搜索
-            for i in range(1, 5):
+            i = 1
+            while i < 5:
                 nx, ny = x - i * dx, y - i * dy
                 if 0 <= nx < self.board_size and 0 <= ny < self.board_size:
                     if self.board[ny][nx] == player:
                         count += 1
+                        i += 1
                     elif self.board[ny][nx] == 0:
-                        empty += 1
+                        open_ends += 1
                         break
                     else:
-                        blocked += 1
                         break
                 else:
-                    blocked += 1
                     break
-            
-            # 根据连续棋子数和阻塞情况计算分数
-            if count == 4:
-                score += 10000  # 五连
-            elif count == 3 and blocked == 0:
-                score += 1000   # 活四
-            elif count == 3 and blocked == 1:
-                score += 100    # 冲四
-            elif count == 2 and blocked == 0:
-                score += 100    # 活三
-            elif count == 2 and blocked == 1:
-                score += 10     # 冲三
-            elif count == 1 and blocked == 0:
-                score += 5      # 活二
-        
+
+            # 根据棋型评分
+            if count >= 5:
+                score += 100000  # 五连
+            elif count == 4:
+                if open_ends == 2:
+                    score += 50000  # 活四（必胜）
+                elif open_ends == 1:
+                    score += 5000   # 冲四
+            elif count == 3:
+                if open_ends == 2:
+                    score += 5000   # 活三
+                elif open_ends == 1:
+                    score += 500    # 眠三/冲三
+            elif count == 2:
+                if open_ends == 2:
+                    score += 500    # 活二
+                elif open_ends == 1:
+                    score += 50     # 眠二
+            elif count == 1:
+                if open_ends == 2:
+                    score += 50     # 活一
+                elif open_ends == 1:
+                    score += 10     # 眠一
+
         return score
     
     def random_move(self):
@@ -217,6 +230,10 @@ class GobangSingle(GobangBase):
                 self.status_var.set("游戏结束! 电脑获胜!")
                 self.game_over = True
                 return
+            elif result == "draw":
+                self.status_var.set("游戏结束! 平局!")
+                self.game_over = True
+                return
             self.current_player = 1
             self.status_var.set(f"当前玩家: 您\n难度: {self.get_difficulty_text()}")
         else:
@@ -249,15 +266,15 @@ class GobangSingle(GobangBase):
         self.redraw_board()
         
         # 更新状态显示
-        self.status_var.set("当前玩家: 黑棋（您）")
-        
+        self.status_var.set(f"当前玩家: 黑棋（您）\n难度: {self.get_difficulty_text()}")
+
         return True
-    
+
     def reset_game(self):
         """重置游戏，清空棋盘并重新开始
-        
+
         Returns:
             None
         """
         super().reset_game()
-        self.status_var.set("当前玩家: 黑棋（您）")
+        self.status_var.set(f"当前玩家: 黑棋（您）\n难度: {self.get_difficulty_text()}")
