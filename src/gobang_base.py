@@ -1,4 +1,7 @@
 import tkinter as tk
+import os
+import subprocess
+import sys
 
 class GobangBase:
     """五子棋游戏基类，包含所有游戏模式共享的核心功能"""
@@ -12,6 +15,16 @@ class GobangBase:
         self.root = root
         self.root.title("五子棋")
         self.root.resizable(False, False)
+        
+        # 设置窗口大小和位置
+        window_width = 800
+        window_height = 700
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
         self.layout = layout
         
         # 棋盘参数
@@ -32,6 +45,7 @@ class GobangBase:
         self.last_move = None  # 上一步落子位置 (x, y) - 保留用于兼容性
         self.last_black_move = None  # 黑方最后落子位置
         self.last_white_move = None  # 白方最后落子位置
+        self.move_history = []  # 悔棋历史记录，存储每一步的棋盘状态和玩家信息
         
         # 根据布局类型创建UI
         if layout == "vertical":
@@ -63,6 +77,10 @@ class GobangBase:
         # 添加按钮区域
         self.button_frame = tk.Frame(self.root)
         self.button_frame.pack(pady=10)
+        
+        # 添加悔棋按钮
+        self.undo_button = tk.Button(self.button_frame, text="悔棋", command=self.undo_move)
+        self.undo_button.pack(side=tk.LEFT, padx=10)
         
         # 添加重置按钮
         self.reset_button = tk.Button(self.button_frame, text="重置游戏", command=self.reset_game)
@@ -113,6 +131,10 @@ class GobangBase:
         self.button_frame = tk.Frame(control_frame)
         self.button_frame.pack(pady=10)
         
+        # 添加悔棋按钮
+        self.undo_button = tk.Button(self.button_frame, text="悔棋", command=self.undo_move, width=15)
+        self.undo_button.pack(pady=10)
+        
         # 添加重置按钮
         self.reset_button = tk.Button(self.button_frame, text="重置游戏", command=self.reset_game, width=15)
         self.reset_button.pack(pady=10)
@@ -148,9 +170,13 @@ class GobangBase:
         # 绑定鼠标事件
         self.canvas.bind("<Button-1>", self.on_click)
         
-        # 右侧按钮区域
+        # 添加按钮区域
         self.button_frame = tk.Frame(main_frame)
         self.button_frame.grid(row=1, column=1, padx=10, pady=10, sticky=tk.N)
+        
+        # 添加悔棋按钮
+        self.undo_button = tk.Button(self.button_frame, text="悔棋", command=self.undo_move, width=15)
+        self.undo_button.pack(pady=10)
         
         # 添加重置按钮
         self.reset_button = tk.Button(self.button_frame, text="重置游戏", command=self.reset_game, width=15)
@@ -201,37 +227,49 @@ class GobangBase:
         if self.game_over:
             return
         
-        # 计算点击位置对应的棋盘坐标
         x = (event.x - self.margin + self.cell_size // 2) // self.cell_size
         y = (event.y - self.margin + self.cell_size // 2) // self.cell_size
         
-        # 检查位置是否有效
-        if 0 <= x < self.board_size and 0 <= y < self.board_size and self.board[y][x] == 0:
-            # 落子
-            self.board[y][x] = self.current_player
-            # 记录上一步落子位置
-            self.last_move = (x, y)
-            # 记录黑方或白方的最后落子位置
-            if self.current_player == 1:
-                self.last_black_move = (x, y)
-            else:
-                self.last_white_move = (x, y)
-            # 重新绘制棋盘和所有棋子，以清除之前的标记并绘制新标记
-            self.redraw_board()
+        result = self._place_stone(x, y, self.current_player)
+        if result == "win":
+            winner = "黑棋" if self.current_player == 1 else "白棋"
+            self.status_var.set(f"游戏结束! {winner}获胜!")
+            self.game_over = True
+            return
+        elif result == "invalid":
+            return
+        
+        self.current_player = 2 if self.current_player == 1 else 1
+        
+        current_player_text = "黑棋" if self.current_player == 1 else "白棋"
+        self.status_var.set(f"当前玩家: {current_player_text}")
+    
+    def _place_stone(self, x, y, player):
+        """在指定位置落子并重绘棋盘
+        
+        Args:
+            x: 棋盘x坐标
+            y: 棋盘y坐标
+            player: 玩家编号（1或2）
             
-            # 检查胜负
-            if self.check_win(x, y, self.current_player):
-                winner = "黑棋" if self.current_player == 1 else "白棋"
-                self.status_var.set(f"游戏结束! {winner}获胜!")
-                self.game_over = True
-                return
-            
-            # 切换玩家
-            self.current_player = 2 if self.current_player == 1 else 1
-            
-            # 更新状态显示
-            current_player_text = "黑棋" if self.current_player == 1 else "白棋"
-            self.status_var.set(f"当前玩家: {current_player_text}")
+        Returns:
+            str: "win"表示落子后获胜, "placed"表示落子成功, "invalid"表示位置无效
+        """
+        if not (0 <= x < self.board_size and 0 <= y < self.board_size and self.board[y][x] == 0):
+            return "invalid"
+        
+        self.save_state()
+        self.board[y][x] = player
+        self.last_move = (x, y)
+        if player == 1:
+            self.last_black_move = (x, y)
+        else:
+            self.last_white_move = (x, y)
+        self.redraw_board()
+        
+        if self.check_win(x, y, player):
+            return "win"
+        return "placed"
     
     def draw_stone(self, x, y, player):
         """绘制棋子
@@ -309,6 +347,18 @@ class GobangBase:
         
         return False
     
+    def save_state(self):
+        """保存当前棋盘状态到历史记录中"""
+        board_copy = [row.copy() for row in self.board]
+        state = {
+            'board': board_copy,
+            'current_player': self.current_player,
+            'last_move': self.last_move,
+            'last_black_move': self.last_black_move,
+            'last_white_move': self.last_white_move
+        }
+        self.move_history.append(state)
+    
     def redraw_board(self):
         """重新绘制棋盘和所有棋子，清除之前的标记"""
         # 清空画布并重新绘制棋盘
@@ -330,6 +380,7 @@ class GobangBase:
         self.last_move = None  # 清空上一步落子位置
         self.last_black_move = None  # 清空黑方最后落子位置
         self.last_white_move = None  # 清空白方最后落子位置
+        self.move_history = []  # 清空历史记录
         
         # 清空画布并重新绘制棋盘
         self.canvas.delete("all")
@@ -338,10 +389,36 @@ class GobangBase:
         # 更新状态
         self.status_var.set("当前玩家: 黑棋")
     
+    def undo_move(self):
+        """悔棋，从历史记录中恢复之前的状态
+        
+        Returns:
+            bool: 是否成功悔棋
+        """
+        if not self.move_history:
+            return False
+        
+        # 从历史记录中取出最后一个状态
+        state = self.move_history.pop()
+        
+        # 恢复状态
+        self.board = state['board']
+        self.current_player = state['current_player']
+        self.last_black_move = state['last_black_move']
+        self.last_white_move = state['last_white_move']
+        self.game_over = False
+        
+        # 重新绘制棋盘
+        self.redraw_board()
+        
+        # 更新状态显示
+        current_player_text = "黑棋" if self.current_player == 1 else "白棋"
+        self.status_var.set(f"当前玩家: {current_player_text}")
+        
+        return True
+    
     def back_to_menu(self):
         """返回主菜单，销毁当前窗口并重新启动应用"""
         self.root.destroy()
-        import subprocess
-        import sys
-        subprocess.Popen([sys.executable, "main.py"])
-        sys.exit()
+        main_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "main.py")
+        subprocess.Popen([sys.executable, main_path])

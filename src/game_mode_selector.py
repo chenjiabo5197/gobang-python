@@ -95,39 +95,27 @@ class GameModeSelector:
         exit_btn.pack(pady=10)
     
     def start_single_player(self):
-        """开始单人游戏，创建GobangSingle实例
-        
-        Returns:
-            None
-        """
-
+        """开始单人游戏，先显示难度选择窗口"""
+        layout = self.layout_var.get()
         self.root.destroy()
         root = tk.Tk()
-        game = GobangSingle(root, layout=self.layout_var.get())
+        difficulty_window = DifficultySelectionWindow(root, layout=layout)
         root.mainloop()
     
     def start_local_multiplayer(self):
-        """开始本地双人游戏，创建GobangMultiplayer实例
-        
-        Returns:
-            None
-        """
-
+        """开始本地双人游戏，创建GobangMultiplayer实例"""
+        layout = self.layout_var.get()
         self.root.destroy()
         root = tk.Tk()
-        game = GobangMultiplayer(root, layout=self.layout_var.get())
+        game = GobangMultiplayer(root, layout=layout)
         root.mainloop()
     
     def start_network_multiplayer(self):
-        """开始网络对战，创建NetworkSetupWindow实例
-        
-        Returns:
-            None
-        """
-
+        """开始网络对战，创建NetworkSetupWindow实例"""
+        layout = self.layout_var.get()
         self.root.destroy()
         root = tk.Tk()
-        network_window = NetworkSetupWindow(root, layout=self.layout_var.get())
+        network_window = NetworkSetupWindow(root, layout=layout)
         root.mainloop()
     
     def exit_game(self):
@@ -208,15 +196,22 @@ class NetworkSetupWindow:
         root.mainloop()
     
     def join_client(self):
-        """加入客户端，创建GobangNetwork实例并设置为network_client模式
+        """加入客户端，弹出IP和端口输入框，然后创建GobangNetwork实例"""
+        from tkinter import simpledialog
         
-        Returns:
-            None
-        """
-
+        ip = simpledialog.askstring("连接设置", "请输入主机IP地址:", initialvalue="127.0.0.1")
+        if not ip:
+            return
+        
+        port_str = simpledialog.askstring("连接设置", "请输入端口号:", initialvalue="12345")
+        try:
+            port = int(port_str)
+        except (ValueError, TypeError):
+            port = 12345
+        
         self.root.destroy()
         root = tk.Tk()
-        game = GobangNetwork(root, game_mode="network_client", layout=self.layout)
+        game = GobangNetwork(root, game_mode="network_client", layout=self.layout, host=ip, port=port)
         root.mainloop()
     
     def go_back(self):
@@ -229,4 +224,97 @@ class NetworkSetupWindow:
         self.root.destroy()
         root = tk.Tk()
         selector = GameModeSelector(root)
+        root.mainloop()
+
+class DifficultySelectionWindow:
+    """难度选择窗口，用于选择单人游戏的难度"""
+
+    def __init__(self, root, layout="vertical"):
+        """初始化难度选择窗口
+        
+        Args:
+            root: Tkinter根窗口对象
+            layout: 布局类型，"vertical"、"horizontal"或"grid"
+        """
+        self.root = root
+        self.root.title("五子棋 - 难度选择")
+        self.root.resizable(False, False)
+        self.layout = layout
+        
+        window_width = 300
+        window_height = 320
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
+        # 创建标题
+        title_label = tk.Label(root, text="选择难度", font=("Arial", 18, "bold"))
+        title_label.pack(pady=20)
+        
+        # 创建难度选择变量
+        self.difficulty_var = tk.StringVar(value="easy")
+        
+        # 创建难度选择按钮
+        difficulty_frame = tk.Frame(root)
+        difficulty_frame.pack(pady=10)
+        
+        easy_btn = tk.Radiobutton(difficulty_frame, text="简单", variable=self.difficulty_var, value="easy", font=("Arial", 12))
+        easy_btn.pack(pady=10)
+        
+        medium_btn = tk.Radiobutton(difficulty_frame, text="中等", variable=self.difficulty_var, value="medium", font=("Arial", 12))
+        medium_btn.pack(pady=10)
+        
+        hard_btn = tk.Radiobutton(difficulty_frame, text="困难", variable=self.difficulty_var, value="hard", font=("Arial", 12))
+        hard_btn.pack(pady=10)
+        
+        # 创建按钮容器
+        button_frame = tk.Frame(root)
+        button_frame.pack(pady=10)
+        
+        # 创建确定按钮
+        confirm_btn = tk.Button(
+            button_frame, 
+            text="确定", 
+            width=15, 
+            height=1, 
+            font=("Arial", 12),
+            command=self.start_game
+        )
+        confirm_btn.pack(pady=10)
+        
+        # 创建返回按钮
+        back_btn = tk.Button(root, text="返回", command=self.go_back)
+        back_btn.pack(pady=10)
+    
+    def start_game(self):
+        """开始单人游戏，创建GobangSingle实例并传递难度参数"""
+        difficulty = self.difficulty_var.get()
+        layout = self.layout
+        self.root.destroy()
+        root = tk.Tk()
+        window_width = 800
+        window_height = 700
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        game = GobangSingle(root, layout=layout, difficulty=difficulty)
+        root.mainloop()
+    
+    def go_back(self):
+        """返回游戏模式选择，创建GameModeSelector实例
+        
+        Returns:
+            None
+        """
+        # 销毁难度选择窗口
+        self.root.destroy()
+        # 创建新的根窗口
+        root = tk.Tk()
+        # 创建游戏模式选择器
+        selector = GameModeSelector(root)
+        # 启动主循环
         root.mainloop()
